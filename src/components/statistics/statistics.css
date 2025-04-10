@@ -1,0 +1,552 @@
+/* Styles généraux */
+.statistics-container {
+    margin-bottom: 24px;
+  }
+  
+  .statistics-header {
+    margin-bottom: 16px;
+  }
+  
+  .statistics-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  
+  .statistics-subtitle {
+    font-size: 14px;
+    color: #666;
+  }
+  
+  /* Cartes de statistiques */
+  .stats-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  
+  @media (max-width: 992px) {
+    .stats-cards-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  
+  @media (max-width: 576px) {
+    .stats-cards-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  .stats-card {
+    background-color: white;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .stats-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  
+  .stats-card-title {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  
+  .stats-card-icon {
+    color: #666;
+  }
+  
+  .stats-card-content {
+    margin-top: 8px;
+  }
+  
+  .stats-card-value {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  
+  .stats-card-description {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+  }
+  
+  /* Onglets */
+  .stats-tabs {
+    margin-bottom: 24px;
+  }
+  
+  .stats-tabs-list {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  
+  .stats-tab {
+    padding: 8px 16px;
+    background-color: #f5f5f5;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: center;
+  }
+  
+  .stats-tab.active {
+    background-color: #4caf50;
+    color: white;
+  }
+  
+  .stats-tab-content {
+    display: none;
+  }
+  
+  .stats-tab-content.active {
+    display: block;
+  }
+  
+  /* Cartes de contenu */
+  .content-card {
+    background-color: white;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .content-card-header {
+    padding: 16px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .content-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+  }
+  
+  .content-card-description {
+    font-size: 14px;
+    color: #666;
+    margin-top: 4px;
+  }
+  
+  .content-card-body {
+    padding: 16px;
+  }
+  
+  /* Grilles */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  
+  @media (max-width: 768px) {
+    .charts-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  .chart-container {
+    height: 300px;
+    position: relative;
+  }
+  
+  .full-width {
+    grid-column: 1 / -1;
+  }
+  
+  .full-width .chart-container {
+    height: 400px;
+  }
+  
+  /* Barre de progression */
+  .progress-container {
+    width: 100%;
+    height: 8px;
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  
+  .progress-bar {
+    height: 100%;
+    background-color: #4caf50;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+  
+  /* Boutons de période */
+  .period-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  
+  .period-button {
+    padding: 6px 12px;
+    background-color: #f5f5f5;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  
+  .period-button.active {
+    background-color: #4caf50;
+    color: white;
+  }
+  
+  /* Tableau */
+  .stats-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .stats-table th,
+  .stats-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .stats-table th {
+    font-weight: 600;
+    background-color: #f9f9f9;
+  }
+  
+  .stats-table tbody tr:hover {
+    background-color: #f5f5f5;
+  }
+  
+  .stats-table .sortable {
+    cursor: pointer;
+  }
+  
+  /* Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  
+  .badge-green {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+  }
+  
+  .badge-blue {
+    background-color: #e3f2fd;
+    color: #1565c0;
+  }
+  
+  .badge-yellow {
+    background-color: #fff8e1;
+    color: #f57f17;
+  }
+  
+  .badge-purple {
+    background-color: #f3e5f5;
+    color: #6a1b9a;
+  }
+  
+  /* Icônes avec texte */
+  .icon-with-text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .text-muted {
+    color: #666;
+  }
+  
+  /* Calendrier d'historique */
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  
+  .calendar-header {
+    text-align: center;
+    font-weight: 500;
+    color: #666;
+    padding: 8px 0;
+  }
+  
+  .calendar-day {
+    height: 48px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+  }
+  
+  .calendar-day:hover {
+    background-color: #f5f5f5;
+  }
+  
+  .calendar-day.selected {
+    border: 2px solid #4caf50;
+  }
+  
+  .calendar-day.today {
+    font-weight: 700;
+  }
+  
+  .calendar-day-background {
+    position: absolute;
+    inset: 4px;
+    border-radius: 4px;
+    z-index: 0;
+  }
+  
+  .calendar-day-content {
+    position: relative;
+    z-index: 1;
+  }
+  
+  .calendar-day-indicator {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    background-color: white;
+    border-radius: 10px;
+    padding: 0 4px;
+  }
+  
+  .calendar-details {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #eee;
+  }
+  
+  .calendar-details-title {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  
+  .calendar-details-section {
+    margin-bottom: 16px;
+  }
+  
+  .calendar-details-section-title {
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  
+  .calendar-details-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .calendar-details-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 14px;
+  }
+  
+  /* Mode sombre */
+  .dark .stats-card,
+  .dark .content-card {
+    background-color: #2a2a2a;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  .dark .stats-card-title,
+  .dark .content-card-title {
+    color: #f0f0f0;
+  }
+  
+  .dark .stats-card-description,
+  .dark .content-card-description,
+  .dark .statistics-subtitle,
+  .dark .text-muted {
+    color: #aaa;
+  }
+  
+  .dark .stats-tab {
+    background-color: #333;
+    color: #f0f0f0;
+  }
+  
+  .dark .stats-tab.active {
+    background-color: #4caf50;
+    color: white;
+  }
+  
+  .dark .content-card-header {
+    border-bottom-color: #444;
+  }
+  
+  .dark .progress-container {
+    background-color: #444;
+  }
+  
+  .dark .period-button {
+    background-color: #333;
+    color: #f0f0f0;
+  }
+  
+  .dark .period-button.active {
+    background-color: #4caf50;
+    color: white;
+  }
+  
+  .dark .stats-table th {
+    background-color: #333;
+    color: #f0f0f0;
+  }
+  
+  .dark .stats-table td {
+    border-bottom-color: #444;
+  }
+  
+  .dark .stats-table tbody tr:hover {
+    background-color: #3a3a3a;
+  }
+  
+  .dark .calendar-day:hover {
+    background-color: #333;
+  }
+  
+  .dark .calendar-day-indicator {
+    background-color: #2a2a2a;
+    color: #f0f0f0;
+  }
+  
+  .dark .calendar-details {
+    border-top-color: #444;
+  }
+  
+  .dark .badge-green {
+    background-color: #1b5e20;
+    color: #a5d6a7;
+  }
+  
+  .dark .badge-blue {
+    background-color: #0d47a1;
+    color: #90caf9;
+  }
+  
+  .dark .badge-yellow {
+    background-color: #e65100;
+    color: #ffcc80;
+  }
+  
+  .dark .badge-purple {
+    background-color: #4a148c;
+    color: #ce93d8;
+  }
+  
+  /* Styles pour les états de chargement et d'erreur */
+  .statistics-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    text-align: center;
+  }
+  
+  .spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top: 4px solid #4caf50;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+  }
+  
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  
+  .statistics-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    text-align: center;
+    color: #f44336;
+  }
+  
+  .bouton-primaire {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 16px;
+  }
+  
+  .bouton-primaire:hover {
+    background-color: #388e3c;
+  }
+  
+  .bouton-retour {
+    background-color: transparent;
+    color: #666;
+    border: none;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  
+  .bouton-retour:hover {
+    color: #4caf50;
+  }
+  
+  /* Mode sombre pour les états de chargement et d'erreur */
+  .dark .spinner {
+    border-color: rgba(255, 255, 255, 0.1);
+    border-top-color: #4caf50;
+  }
+  
+  .dark .statistics-error {
+    color: #ef5350;
+  }
+  
+  .dark .bouton-retour {
+    color: #aaa;
+  }
+  
+  .dark .bouton-retour:hover {
+    color: #4caf50;
+  }
+  

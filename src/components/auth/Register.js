@@ -1,11 +1,14 @@
 "use client"
 
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { authService } from "../../services/api.service"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faEnvelope, faLock, faUser, faUserPlus, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons"
 
-const Register = ({ onRegisterSuccess }) => {
+const Register = () => {
+  const navigate = useNavigate()
+
   const [userData, setUserData] = useState({
     nom: "",
     email: "",
@@ -38,7 +41,7 @@ const Register = ({ onRegisterSuccess }) => {
       // Envoyer uniquement les données nécessaires (sans confirmPassword)
       const { confirmPassword, ...registerData } = userData
       await authService.register(registerData)
-      if (onRegisterSuccess) onRegisterSuccess()
+      navigate("/login")
     } catch (err) {
       setError(err.message || "Erreur d'inscription. Veuillez réessayer.")
     } finally {
@@ -143,7 +146,13 @@ const Register = ({ onRegisterSuccess }) => {
       </form>
 
       <div className="auth-form-footer">
-        <p>Vous avez déjà un compte ? Connectez-vous.</p>
+        <p>
+          Vous avez déjà un compte ?{" "}
+          <span className="auth-form-link" onClick={() => navigate("/login")}>
+            Connectez-vous
+          </span>
+          .
+        </p>
       </div>
     </div>
   )

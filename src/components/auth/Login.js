@@ -1,11 +1,14 @@
 "use client"
 
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { authService } from "../../services/api.service"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faEnvelope, faLock, faSignInAlt } from "@fortawesome/free-solid-svg-icons"
 
-const Login = ({ onLoginSuccess }) => {
+const Login = () => {
+  const navigate = useNavigate()
+
   const [credentials, setCredentials] = useState({
     email: "",
     password: "",
@@ -27,7 +30,7 @@ const Login = ({ onLoginSuccess }) => {
 
     try {
       await authService.login(credentials)
-      if (onLoginSuccess) onLoginSuccess()
+      navigate("/dashboard")
     } catch (err) {
       setError(err.message || "Identifiants invalides. Veuillez réessayer.")
     } finally {

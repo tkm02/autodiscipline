@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { useNavigate } from "react-router-dom"
-import "./Dashboard.css"
+import "../pages/Dashboard.css"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
-  faEye,
+  faCheckCircle,
+  faTimesCircle,
   faEdit,
   faTrash,
   faPlusCircle,
@@ -20,13 +20,11 @@ import {
   faPercentage,
   faSignOutAlt,
   faUser,
+  faHistory,
   faClock,
   faSpinner,
   faCheckDouble,
   faFilter,
-  faCheckCircle,
-  faTimesCircle,
-  faMoneyBillWave, // Ajout de l'icône pour la finance
 } from "@fortawesome/free-solid-svg-icons"
 import { Line, Pie, Bar } from "react-chartjs-2"
 import {
@@ -52,16 +50,21 @@ import Register from "../components/auth/Register"
 // Importer le composant d'exportation
 import ExportOptions from "../components/export/ExportOptions"
 
+// Importer les composants pour les objectifs
+import CommentaireObjectif from "../components/CommentaireObjectif"
+import HistoriqueCommentaires from "../components/HistoriqueCommentaires"
+import StatutObjectif from "../components/StatutObjectif"
+
 // Enregistrer les composants Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title)
 
 const Dashboard = ({ theme }) => {
-  const navigate = useNavigate()
-
   // États pour gérer les objectifs et le formulaire
   const [objectifs, setObjectifs] = useState([])
+  const [afficherFormulaire, setAfficherFormulaire] = useState(false)
   const [categorieActive, setCategorieActive] = useState("tous")
   const [statutActif, setStatutActif] = useState("tous")
+  const [progressionEdition, setProgressionEdition] = useState({})
   const [vueActive, setVueActive] = useState("tableau") // 'tableau' ou 'graphiques'
   const [periodeGraphique, setPeriodeGraphique] = useState("7jours") // '7jours', '30jours', '90jours'
 
@@ -71,13 +74,28 @@ const Dashboard = ({ theme }) => {
   const [authMode, setAuthMode] = useState("login") // 'login' ou 'register'
   const [loading, setLoading] = useState(true)
 
+  // État pour le nouvel objectif
+  const [nouvelObjectif, setNouvelObjectif] = useState({
+    nom: "",
+    categorie: "personnel",
+    typeDeTracking: "binaire",
+    frequence: "quotidien",
+    cible: "",
+    description: "",
+    statut: "en_attente",
+  })
+
+  // État pour l'objectif en cours d'édition
+  const [objectifEnEdition, setObjectifEnEdition] = useState(null)
+
+  // État pour l'historique des commentaires
+  const [objectifHistorique, setObjectifHistorique] = useState(null)
+
   // Vérifier l'authentification au chargement
   const checkAuth = useCallback(async () => {
     try {
       if (authService.isAuthenticated()) {
         const userData = await authService.getCurrentUser()
-        console.log("userData", userData);
-        
         setUser(userData.data)
         setIsAuthenticated(true)
 
@@ -151,9 +169,18 @@ const Dashboard = ({ theme }) => {
     authService.logout()
     setIsAuthenticated(false)
     setUser(null)
+    // Réinitialiser le formulaire d'édition
+    setObjectifEnEdition(null)
     // Charger les exemples d'objectifs
     setObjectifs(obtenirExemplesObjectifs())
   }
+
+  // Sauvegarder les objectifs dans le localStorage quand ils changent
+  useEffect(() => {
+    if (objectifs.length > 0 && !isAuthenticated) {
+      localStorage.setItem("objectifs", JSON.stringify(objectifs))
+    }
+  }, [objectifs, isAuthenticated])
 
   // Fonction pour générer un ID unique
   const genererID = () => {
@@ -251,42 +278,6 @@ const Dashboard = ({ theme }) => {
             progression: { [dateStr]: Math.random() * 2 },
             commentaires: {},
           },
-          {
-            id: "finance1",
-            nom: "Économiser pour les vacances",
-            categorie: "finance",
-            typeDeTracking: "numerique",
-            frequence: "mensuel",
-            cible: 1200,
-            description: "Montant économisé pour les vacances d'été",
-            statut: "en_cours",
-            progression: { [dateStr]: Math.random() * 200 + 50 },
-            commentaires: {},
-          },
-          {
-            id: "finance2",
-            nom: "Réduire les dépenses alimentaires",
-            categorie: "finance",
-            typeDeTracking: "numerique",
-            frequence: "hebdomadaire",
-            cible: 80,
-            description: "Budget courses hebdomadaire",
-            statut: "en_cours",
-            progression: { [dateStr]: Math.random() * 30 + 60 },
-            commentaires: {},
-          },
-          {
-            id: "finance3",
-            nom: "Investissement mensuel",
-            categorie: "finance",
-            typeDeTracking: "numerique",
-            frequence: "mensuel",
-            cible: 300,
-            description: "Montant investi chaque mois",
-            statut: "en_cours",
-            progression: { [dateStr]: Math.random() * 100 + 200 },
-            commentaires: {},
-          },
         )
       } else {
         // Jours précédents - ajouter des données historiques aléatoires
@@ -302,16 +293,6 @@ const Dashboard = ({ theme }) => {
           } else if (obj.typeDeTracking === "numerique") {
             if (obj.nom.includes("projets")) {
               obj.progression[dateStr] = Math.random() * 3 + 0.5
-            } else if (obj.categorie === "finance") {
-              if (obj.nom.includes("Économiser")) {
-                obj.progression[dateStr] = Math.random() * 200 + 50
-              } else if (obj.nom.includes("dépenses")) {
-                obj.progression[dateStr] = Math.random() * 30 + 60
-              } else if (obj.nom.includes("Investissement")) {
-                obj.progression[dateStr] = Math.random() * 100 + 200
-              } else {
-                obj.progression[dateStr] = Math.random() * 50 + 50
-              }
             } else {
               obj.progression[dateStr] = Math.random() * 2
             }
@@ -330,20 +311,262 @@ const Dashboard = ({ theme }) => {
     return filtreCategorie && filtreStatut
   })
 
+  // Fonction pour basculer la complétion d'un objectif binaire
+  const basculerCompletion = async (id) => {
+    const objectif = objectifs.find((obj) => obj.id === id)
+    if (!objectif || objectif.typeDeTracking !== "binaire") return
+
+    const aujourdhui = new Date().toISOString().split("T")[0]
+    const estComplete = objectif.progression[aujourdhui] === true
+
+    // Mettre à jour localement
+    const objectifsMisAJour = objectifs.map((obj) => {
+      if (obj.id === id) {
+        return {
+          ...obj,
+          progression: {
+            ...obj.progression,
+            [aujourdhui]: !estComplete,
+          },
+        }
+      }
+      return obj
+    })
+
+    setObjectifs(objectifsMisAJour)
+
+    // Si authentifié, mettre à jour sur le serveur
+    if (isAuthenticated) {
+      try {
+        await objectifService.updateProgression(id, aujourdhui, !estComplete)
+      } catch (error) {
+        console.error("Erreur lors de la mise à jour de la progression:", error)
+        // Revenir à l'état précédent en cas d'erreur
+        setObjectifs(objectifs)
+      }
+    }
+  }
+
+  // Fonction pour mettre à jour la progression numérique
+  const mettreAJourProgressionNumerique = async (id) => {
+    const objectif = objectifs.find((obj) => obj.id === id)
+    if (!objectif || !progressionEdition[id]) return
+
+    const aujourdhui = new Date().toISOString().split("T")[0]
+    const valeur = progressionEdition[id]
+    const valeurNumerique = objectif.typeDeTracking === "compteur" ? Number.parseInt(valeur) : Number.parseFloat(valeur)
+
+    // Mettre à jour localement
+    const objectifsMisAJour = objectifs.map((obj) => {
+      if (obj.id === id) {
+        return {
+          ...obj,
+          progression: {
+            ...obj.progression,
+            [aujourdhui]: valeurNumerique,
+          },
+        }
+      }
+      return obj
+    })
+
+    setObjectifs(objectifsMisAJour)
+
+    setProgressionEdition({
+      ...progressionEdition,
+      [id]: "",
+    })
+
+    // Si authentifié, mettre à jour sur le serveur
+    if (isAuthenticated) {
+      try {
+        await objectifService.updateProgression(id, aujourdhui, valeurNumerique)
+      } catch (error) {
+        console.error("Erreur lors de la mise à jour de la progression:", error)
+        // Revenir à l'état précédent en cas d'erreur
+        setObjectifs(objectifs)
+      }
+    }
+  }
+
+  // Fonction pour mettre à jour le statut d'un objectif
+  const mettreAJourStatut = async (id, statut) => {
+    // Mettre à jour localement
+    const objectifsMisAJour = objectifs.map((obj) => {
+      if (obj.id === id) {
+        return {
+          ...obj,
+          statut,
+        }
+      }
+      return obj
+    })
+
+    setObjectifs(objectifsMisAJour)
+
+    // Si authentifié, mettre à jour sur le serveur
+    if (isAuthenticated) {
+      try {
+        await objectifService.updateStatut(id, statut)
+      } catch (error) {
+        console.error("Erreur lors de la mise à jour du statut:", error)
+        // Revenir à l'état précédent en cas d'erreur
+        setObjectifs(objectifs)
+      }
+    }
+  }
+
+  // Fonction pour ajouter un nouvel objectif
+  const ajouterObjectif = async () => {
+    if (!nouvelObjectif.nom) return
+
+    const objectifAjoute = {
+      ...nouvelObjectif,
+      progression: {},
+      commentaires: {},
+    }
+
+    // Convertir la cible en nombre si nécessaire
+    if (nouvelObjectif.cible) {
+      objectifAjoute.cible =
+        nouvelObjectif.typeDeTracking === "compteur"
+          ? Number.parseInt(nouvelObjectif.cible)
+          : Number.parseFloat(nouvelObjectif.cible)
+    }
+
+    // Si authentifié, ajouter sur le serveur
+    if (isAuthenticated) {
+      try {
+        const response = await objectifService.createObjectif(objectifAjoute)
+
+        // Adapter le format des données reçues du backend
+        const formattedObjectif = {
+          id: response.data.id,
+          nom: response.data.nom,
+          categorie: response.data.categorie,
+          typeDeTracking: response.data.typeDeTracking,
+          frequence: response.data.frequence,
+          cible: response.data.cible,
+          description: response.data.description,
+          statut: response.data.statut,
+          progression: response.data.progression,
+          commentaires: response.data.commentaires,
+        }
+
+        setObjectifs([...objectifs, formattedObjectif])
+      } catch (error) {
+        console.error("Erreur lors de l'ajout de l'objectif:", error)
+        // Ajouter localement en cas d'erreur
+        objectifAjoute.id = genererID()
+        setObjectifs([...objectifs, objectifAjoute])
+      }
+    } else {
+      // Ajouter localement si non authentifié
+      objectifAjoute.id = genererID()
+      setObjectifs([...objectifs, objectifAjoute])
+    }
+
+    // Réinitialiser le formulaire
+    setNouvelObjectif({
+      nom: "",
+      categorie: "personnel",
+      typeDeTracking: "binaire",
+      frequence: "quotidien",
+      cible: "",
+      description: "",
+      statut: "en_attente",
+    })
+
+    setAfficherFormulaire(false)
+  }
+
+  // Fonction pour mettre à jour un objectif existant
+  const mettreAJourObjectif = async () => {
+    if (!objectifEnEdition || !objectifEnEdition.nom) return
+
+    const objectifMisAJour = {
+      ...objectifEnEdition,
+    }
+
+    // Convertir la cible en nombre si nécessaire
+    if (objectifEnEdition.cible) {
+      objectifMisAJour.cible =
+        objectifEnEdition.typeDeTracking === "compteur"
+          ? Number.parseInt(objectifEnEdition.cible)
+          : Number.parseFloat(objectifEnEdition.cible)
+    }
+
+    // Si authentifié, mettre à jour sur le serveur
+    if (isAuthenticated) {
+      try {
+        const response = await objectifService.updateObjectif(objectifEnEdition.id, objectifMisAJour)
+
+        // Adapter le format des données reçues du backend
+        const formattedObjectif = {
+          id: response.data.id,
+          nom: response.data.nom,
+          categorie: response.data.categorie,
+          typeDeTracking: response.data.typeDeTracking,
+          frequence: response.data.frequence,
+          cible: response.data.cible,
+          description: response.data.description,
+          statut: response.data.statut,
+          progression: response.data.progression,
+          commentaires: response.data.commentaires,
+        }
+
+        // Mettre à jour l'objectif dans la liste
+        setObjectifs(objectifs.map((obj) => (obj.id === formattedObjectif.id ? formattedObjectif : obj)))
+      } catch (error) {
+        console.error("Erreur lors de la mise à jour de l'objectif:", error)
+        // Mettre à jour localement en cas d'erreur
+        setObjectifs(
+          objectifs.map((obj) =>
+            obj.id === objectifEnEdition.id ? { ...obj, ...objectifMisAJour, progression: obj.progression } : obj,
+          ),
+        )
+      }
+    } else {
+      // Mettre à jour localement si non authentifié
+      setObjectifs(objectifs.map((obj) => (obj.id === objectifEnEdition.id ? { ...obj, ...objectifMisAJour } : obj)))
+    }
+    // Réinitialiser le formulaire
+    setObjectifEnEdition(null)
+    setAfficherFormulaire(false)
+  }
+
   // Fonction pour supprimer un objectif
   const supprimerObjectif = async (id) => {
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer cet objectif ?")) {
+    // Si authentifié, supprimer sur le serveur
+    if (isAuthenticated) {
       try {
-        if (isAuthenticated) {
-          await objectifService.deleteObjectif(id)
-        }
-        // Supprimer localement
+        await objectifService.deleteObjectif(id)
+        // Supprimer localement après confirmation du serveur
         const objectifsFiltres = objectifs.filter((obj) => obj.id !== id)
         setObjectifs(objectifsFiltres)
       } catch (error) {
         console.error("Erreur lors de la suppression de l'objectif:", error)
       }
+    } else {
+      // Supprimer localement si non authentifié
+      const objectifsFiltres = objectifs.filter((obj) => obj.id !== id)
+      setObjectifs(objectifsFiltres)
     }
+  }
+
+  // Fonction pour commencer l'édition d'un objectif
+  const commencerEdition = (objectif) => {
+    setObjectifEnEdition({
+      id: objectif.id,
+      nom: objectif.nom,
+      categorie: objectif.categorie,
+      typeDeTracking: objectif.typeDeTracking,
+      frequence: objectif.frequence,
+      cible: objectif.cible || "",
+      description: objectif.description || "",
+      statut: objectif.statut || "en_attente",
+    })
+    setAfficherFormulaire(true)
   }
 
   // Fonction pour obtenir l'icône de catégorie
@@ -355,8 +578,6 @@ const Dashboard = ({ theme }) => {
         return <FontAwesomeIcon icon={faBriefcase} className="icone-categorie professionnel" />
       case "personnel":
         return <FontAwesomeIcon icon={faDumbbell} className="icone-categorie personnel" />
-      case "finance":
-        return <FontAwesomeIcon icon={faMoneyBillWave} className="icone-categorie finance" />
       default:
         return null
     }
@@ -376,17 +597,132 @@ const Dashboard = ({ theme }) => {
     }
   }
 
-  // Fonction pour obtenir le libellé de statut
-  const obtenirLibelleStatut = (statut) => {
-    switch (statut) {
-      case "en_attente":
-        return "En attente"
-      case "en_cours":
-        return "En cours"
-      case "termine":
-        return "Terminé"
+  // Fonction pour sauvegarder un commentaire
+  const sauvegarderCommentaire = async (id, date, commentaire) => {
+    const objectif = objectifs.find((obj) => obj.id === id)
+    if (!objectif) return
+
+    // Mettre à jour localement
+    const objectifsMisAJour = objectifs.map((obj) => {
+      if (obj.id === id) {
+        return {
+          ...obj,
+          commentaires: {
+            ...obj.commentaires,
+            [date]: commentaire,
+          },
+        }
+      }
+      return obj
+    })
+
+    setObjectifs(objectifsMisAJour)
+
+    // Si authentifié, mettre à jour sur le serveur
+    if (isAuthenticated) {
+      try {
+        await objectifService.updateCommentaire(id, date, commentaire)
+      } catch (error) {
+        console.error("Erreur lors de la mise à jour du commentaire:", error)
+        // Revenir à l'état précédent en cas d'erreur
+        setObjectifs(objectifs)
+      }
+    }
+  }
+
+  // Fonction pour obtenir l'affichage de la progression
+  const obtenirAffichageProgression = (objectif) => {
+    const aujourdhui = new Date().toISOString().split("T")[0]
+    const progression = objectif.progression[aujourdhui]
+
+    if (objectif.typeDeTracking === "binaire") {
+      return (
+        <button
+          className={`bouton-statut ${progression ? "complete" : "non-complete"}`}
+          onClick={() => basculerCompletion(objectif.id)}
+        >
+          <FontAwesomeIcon
+            icon={progression ? faCheckCircle : faTimesCircle}
+            className={progression ? "icone-check" : "icone-times"}
+          />
+          {progression ? "Complété" : "Non complété"}
+        </button>
+      )
+    } else {
+      return (
+        <div className="progression-numerique">
+          <input
+            type="number"
+            value={progressionEdition[objectif.id] || ""}
+            onChange={(e) =>
+              setProgressionEdition((prev) => ({
+                ...prev,
+                [objectif.id]: e.target.value,
+              }))
+            }
+            placeholder={progression ? progression.toString() : "0"}
+            className="input-progression"
+          />
+          <button className="bouton-enregistrer" onClick={() => mettreAJourProgressionNumerique(objectif.id)}>
+            Enregistrer
+          </button>
+          <span className="valeur-actuelle">
+            {progression ? `Actuel: ${progression}` : "Non suivi"}
+            {objectif.cible ? ` / Cible: ${objectif.cible}` : ""}
+          </span>
+        </div>
+      )
+    }
+  }
+
+  // Fonction pour obtenir l'affichage du commentaire
+  const obtenirAffichageCommentaire = (objectif) => {
+    const aujourdhui = new Date().toISOString().split("T")[0]
+
+    return (
+      <div className="commentaire-container">
+        <CommentaireObjectif
+          objectif={objectif}
+          date={aujourdhui}
+          onSaveCommentaire={sauvegarderCommentaire}
+          isAuthenticated={isAuthenticated}
+        />
+
+        {/* Bouton pour afficher l'historique des commentaires */}
+        {objectif.commentaires && Object.keys(objectif.commentaires).length > 0 && (
+          <button className="bouton-historique" onClick={() => setObjectifHistorique(objectif)}>
+            <FontAwesomeIcon icon={faHistory} /> Historique
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  // Fonction pour obtenir le libellé de fréquence
+  const obtenirLibelleFrequence = (frequence) => {
+    switch (frequence) {
+      case "quotidien":
+        return "Quotidien"
+      case "hebdomadaire":
+        return "Hebdomadaire"
+      case "mensuel":
+        return "Mensuel"
       default:
-        return "En attente"
+        return frequence
+    }
+  }
+
+  // Fonction pour obtenir le libellé de type de tracking
+  const obtenirLibelleTypeTracking = (type) => {
+    switch (type) {
+      case "binaire":
+        return "Binaire (✅/❌)"
+      case "compteur":
+        return "Compteur"
+      case "numerique":
+        return "Valeur numérique"
+      default:
+        return type
     }
   }
 
@@ -432,7 +768,6 @@ const Dashboard = ({ theme }) => {
       spirituel: objectifs.filter((obj) => obj.categorie === "spirituel"),
       professionnel: objectifs.filter((obj) => obj.categorie === "professionnel"),
       personnel: objectifs.filter((obj) => obj.categorie === "personnel"),
-      finance: objectifs.filter((obj) => obj.categorie === "finance"),
     }
 
     const donneesGraphique = {
@@ -445,7 +780,6 @@ const Dashboard = ({ theme }) => {
       spirituel: "rgba(76, 175, 80, 0.7)",
       professionnel: "rgba(33, 150, 243, 0.7)",
       personnel: "rgba(255, 152, 0, 0.7)",
-      finance: "rgba(103, 58, 183, 0.7)",
     }
 
     // Ajouter les données pour chaque catégorie
@@ -480,13 +814,7 @@ const Dashboard = ({ theme }) => {
 
       donneesGraphique.datasets.push({
         label:
-          categorie === "spirituel"
-            ? "Spirituels"
-            : categorie === "professionnel"
-              ? "Professionnels"
-              : categorie === "personnel"
-                ? "Personnels"
-                : "Finances",
+          categorie === "spirituel" ? "Spirituels" : categorie === "professionnel" ? "Professionnels" : "Personnels",
         data: tauxCompletion,
         borderColor: couleurs[categorie],
         backgroundColor: couleurs[categorie].replace("0.7", "0.2"),
@@ -504,7 +832,6 @@ const Dashboard = ({ theme }) => {
       Spirituels: objectifs.filter((obj) => obj.categorie === "spirituel").length,
       Professionnels: objectifs.filter((obj) => obj.categorie === "professionnel").length,
       Personnels: objectifs.filter((obj) => obj.categorie === "personnel").length,
-      Finances: objectifs.filter((obj) => obj.categorie === "finance").length,
     }
 
     return {
@@ -512,18 +839,8 @@ const Dashboard = ({ theme }) => {
       datasets: [
         {
           data: Object.values(nombreObjectifsParCategorie),
-          backgroundColor: [
-            "rgba(76, 175, 80, 0.7)",
-            "rgba(33, 150, 243, 0.7)",
-            "rgba(255, 152, 0, 0.7)",
-            "rgba(103, 58, 183, 0.7)", // Couleur pour la finance
-          ],
-          borderColor: [
-            "rgba(76, 175, 80, 1)",
-            "rgba(33, 150, 243, 1)",
-            "rgba(255, 152, 0, 1)",
-            "rgba(103, 58, 183, 1)", // Couleur pour la finance
-          ],
+          backgroundColor: ["rgba(76, 175, 80, 0.7)", "rgba(33, 150, 243, 0.7)", "rgba(255, 152, 0, 0.7)"],
+          borderColor: ["rgba(76, 175, 80, 1)", "rgba(33, 150, 243, 1)", "rgba(255, 152, 0, 1)"],
           borderWidth: 1,
         },
       ],
@@ -583,17 +900,13 @@ const Dashboard = ({ theme }) => {
                     ? "rgba(76, 175, 80, 0.7)"
                     : objectif.categorie === "professionnel"
                       ? "rgba(33, 150, 243, 0.7)"
-                      : objectif.categorie === "personnel"
-                        ? "rgba(255, 152, 0, 0.7)"
-                        : "rgba(103, 58, 183, 0.7)" // Couleur pour la finance
+                      : "rgba(255, 152, 0, 0.7)"
                 })
               : categorieActive === "spirituel"
                 ? "rgba(76, 175, 80, 0.7)"
                 : categorieActive === "professionnel"
                   ? "rgba(33, 150, 243, 0.7)"
-                  : categorieActive === "personnel"
-                    ? "rgba(255, 152, 0, 0.7)"
-                    : "rgba(103, 58, 183, 0.7)", // Couleur pour la finance
+                  : "rgba(255, 152, 0, 0.7)",
           borderWidth: 1,
         },
       ],
@@ -606,17 +919,11 @@ const Dashboard = ({ theme }) => {
     const dates = obtenirDatesGraphique()
 
     // Nombre total d'objectifs
-    // console.log(objectifs);
-
-    const objectifEnCours = objectifs.filter((obj) => obj.statut === "en_cours");
-    console.log(objectifEnCours);
-    
-    
-    const nombreTotal = objectifEnCours.length
+    const nombreTotal = objectifs.length
 
     // Objectifs complétés aujourd'hui
     let completesAujourdhui = 0
-    objectifEnCours.forEach((obj) => {
+    objectifs.forEach((obj) => {
       if (obj.progression[aujourdhui] !== undefined) {
         if (obj.typeDeTracking === "binaire") {
           if (obj.progression[aujourdhui] === true) {
@@ -633,9 +940,8 @@ const Dashboard = ({ theme }) => {
     // Taux de complétion global sur la période
     let totalJoursCompletes = 0
     let totalJoursTrackes = 0
-    // je dois revvoir la logique de calcul du taux de complétion global
-    // console.log(objectifs);
-    objectifEnCours.forEach((obj) => {
+
+    objectifs.forEach((obj) => {
       dates.forEach((date) => {
         if (obj.progression[date] !== undefined) {
           totalJoursTrackes++
@@ -716,7 +1022,7 @@ const Dashboard = ({ theme }) => {
   // Si non authentifié, afficher le formulaire de connexion/inscription
   if (!isAuthenticated) {
     return (
-      <div className="dashboard">
+      <div className={`dashboard ${theme}`}>
         <div className="entete-dashboard">
           <h1>Tableau de Suivi d'Objectifs</h1>
         </div>
@@ -759,7 +1065,7 @@ const Dashboard = ({ theme }) => {
   }
 
   return (
-    <div className="dashboard">
+    <div className={`dashboard ${theme}`}>
       <div className="entete-dashboard">
         <h1>Tableau de Suivi d'Objectifs</h1>
         <div className="actions-entete">
@@ -770,35 +1076,157 @@ const Dashboard = ({ theme }) => {
               <FontAwesomeIcon icon={faSignOutAlt} />
             </button>
           </div>
-<div className="boutons-vue">
-  <button
-    className={`bouton-vue ${vueActive === "tableau" ? "actif" : ""}`}
-    onClick={() => setVueActive("tableau")}
-  >
-    <FontAwesomeIcon icon={faCalendarAlt} className="mr-2" />
-    Tableau
-  </button>
-  <button
-    className={`bouton-vue ${vueActive === "graphiques" ? "actif" : ""}`}
-    onClick={() => setVueActive("graphiques")}
-  >
-    <FontAwesomeIcon icon={faChartLine} className="mr-2" />
-    Graphiques
-  </button>
-  <button
-    className="bouton-vue"
-    onClick={() => navigate("/statistics")}
-  >
-    <FontAwesomeIcon icon={faChartBar} className="mr-2" />
-    Statistiques avancées
-  </button>
-</div>
-          <button className="bouton-ajouter" onClick={() => navigate("/objectif/ajouter")}>
+          <div className="boutons-vue">
+            <button
+              className={`bouton-vue ${vueActive === "tableau" ? "actif" : ""}`}
+              onClick={() => setVueActive("tableau")}
+            >
+              <FontAwesomeIcon icon={faCalendarAlt} className="mr-2" />
+              Tableau
+            </button>
+            <button
+              className={`bouton-vue ${vueActive === "graphiques" ? "actif" : ""}`}
+              onClick={() => setVueActive("graphiques")}
+            >
+              <FontAwesomeIcon icon={faChartLine} className="mr-2" />
+              Graphiques
+            </button>
+          </div>
+          <button className="bouton-ajouter" onClick={() => setAfficherFormulaire(!afficherFormulaire)}>
             <FontAwesomeIcon icon={faPlusCircle} className="mr-2" />
-            Ajouter un objectif
+            {afficherFormulaire ? "Fermer" : "Ajouter un objectif"}
           </button>
         </div>
       </div>
+
+      {/* Formulaire d'ajout/édition d'objectif */}
+      {afficherFormulaire && (
+        <div className="formulaire-objectif">
+          <h2>{objectifEnEdition ? "Modifier l'objectif" : "Ajouter un nouvel objectif"}</h2>
+          <div className="grille-formulaire">
+            <div className="groupe-formulaire">
+              <label>Nom de l'objectif</label>
+              <input
+                type="text"
+                placeholder="Ex: Faire du sport"
+                value={objectifEnEdition ? objectifEnEdition.nom : nouvelObjectif.nom}
+                onChange={(e) =>
+                  objectifEnEdition
+                    ? setObjectifEnEdition({ ...objectifEnEdition, nom: e.target.value })
+                    : setNouvelObjectif({ ...nouvelObjectif, nom: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="groupe-formulaire">
+              <label>Catégorie</label>
+              <select
+                value={objectifEnEdition ? objectifEnEdition.categorie : nouvelObjectif.categorie}
+                onChange={(e) =>
+                  objectifEnEdition
+                    ? setObjectifEnEdition({ ...objectifEnEdition, categorie: e.target.value })
+                    : setNouvelObjectif({ ...nouvelObjectif, categorie: e.target.value })
+                }
+              >
+                <option value="spirituel">Spirituel</option>
+                <option value="professionnel">Professionnel</option>
+                <option value="personnel">Personnel</option>
+              </select>
+            </div>
+
+            <div className="groupe-formulaire">
+              <label>Type de suivi</label>
+              <select
+                value={objectifEnEdition ? objectifEnEdition.typeDeTracking : nouvelObjectif.typeDeTracking}
+                onChange={(e) =>
+                  objectifEnEdition
+                    ? setObjectifEnEdition({ ...objectifEnEdition, typeDeTracking: e.target.value })
+                    : setNouvelObjectif({ ...nouvelObjectif, typeDeTracking: e.target.value })
+                }
+              >
+                <option value="binaire">Binaire (✅/❌)</option>
+                <option value="compteur">Compteur</option>
+                <option value="numerique">Valeur numérique</option>
+              </select>
+            </div>
+
+            <div className="groupe-formulaire">
+              <label>Fréquence</label>
+              <select
+                value={objectifEnEdition ? objectifEnEdition.frequence : nouvelObjectif.frequence}
+                onChange={(e) =>
+                  objectifEnEdition
+                    ? setObjectifEnEdition({ ...objectifEnEdition, frequence: e.target.value })
+                    : setNouvelObjectif({ ...nouvelObjectif, frequence: e.target.value })
+                }
+              >
+                <option value="quotidien">Quotidienne</option>
+                <option value="hebdomadaire">Hebdomadaire</option>
+                <option value="mensuel">Mensuelle</option>
+              </select>
+            </div>
+
+            <div className="groupe-formulaire">
+              <label>Statut</label>
+              <select
+                value={objectifEnEdition ? objectifEnEdition.statut : nouvelObjectif.statut}
+                onChange={(e) =>
+                  objectifEnEdition
+                    ? setObjectifEnEdition({ ...objectifEnEdition, statut: e.target.value })
+                    : setNouvelObjectif({ ...nouvelObjectif, statut: e.target.value })
+                }
+              >
+                <option value="en_attente">En attente</option>
+                <option value="en_cours">En cours</option>
+                <option value="termine">Terminé</option>
+              </select>
+            </div>
+
+            <div className="groupe-formulaire">
+              <label>Objectif cible (optionnel)</label>
+              <input
+                type="text"
+                placeholder="Ex: 30"
+                value={objectifEnEdition ? objectifEnEdition.cible : nouvelObjectif.cible}
+                onChange={(e) =>
+                  objectifEnEdition
+                    ? setObjectifEnEdition({ ...objectifEnEdition, cible: e.target.value })
+                    : setNouvelObjectif({ ...nouvelObjectif, cible: e.target.value })
+                }
+              />
+              <small>Laissez vide si non applicable</small>
+            </div>
+
+            <div className="groupe-formulaire pleine-largeur">
+              <label>Description (optionnelle)</label>
+              <textarea
+                placeholder="Décrivez votre objectif plus en détail..."
+                value={objectifEnEdition ? objectifEnEdition.description : nouvelObjectif.description}
+                onChange={(e) =>
+                  objectifEnEdition
+                    ? setObjectifEnEdition({ ...objectifEnEdition, description: e.target.value })
+                    : setNouvelObjectif({ ...nouvelObjectif, description: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="actions-formulaire">
+            <button
+              className="bouton-annuler"
+              onClick={() => {
+                setAfficherFormulaire(false)
+                setObjectifEnEdition(null)
+              }}
+            >
+              Annuler
+            </button>
+            <button className="bouton-ajouter" onClick={objectifEnEdition ? mettreAJourObjectif : ajouterObjectif}>
+              {objectifEnEdition ? "Mettre à jour" : "Ajouter l'objectif"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Onglets de catégories */}
       <div className="onglets-categories">
@@ -825,12 +1253,6 @@ const Dashboard = ({ theme }) => {
           onClick={() => setCategorieActive("personnel")}
         >
           Personnels
-        </button>
-        <button
-          className={`onglet ${categorieActive === "finance" ? "actif" : ""}`}
-          onClick={() => setCategorieActive("finance")}
-        >
-          Finances
         </button>
       </div>
 
@@ -867,24 +1289,25 @@ const Dashboard = ({ theme }) => {
 
       {/* Vue Tableau ou Graphiques */}
       {vueActive === "tableau" ? (
-        /* Tableau des objectifs simplifié */
+        /* Tableau des objectifs */
         <div className="conteneur-tableau">
           <table className="tableau-objectifs">
             <thead>
               <tr>
                 {categorieActive === "tous" && <th>Catégorie</th>}
                 <th>Objectif</th>
+                <th>Statut</th>
                 <th>Fréquence</th>
                 <th>Type de suivi</th>
                 <th>Progression du jour</th>
-                <th>Statut</th>
-                <th className="text-right">Actions</th>
+                <th>Commentaires</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {objectifsFiltres.length === 0 ? (
                 <tr>
-                  <td colSpan={categorieActive === "tous" ? 7 : 6} className="aucun-objectif">
+                  <td colSpan={categorieActive === "tous" ? 8 : 7} className="aucun-objectif">
                     Aucun objectif trouvé dans cette catégorie
                   </td>
                 </tr>
@@ -899,7 +1322,6 @@ const Dashboard = ({ theme }) => {
                             {objectif.categorie === "spirituel" && "Spirituel"}
                             {objectif.categorie === "professionnel" && "Professionnel"}
                             {objectif.categorie === "personnel" && "Personnel"}
-                            {objectif.categorie === "finance" && "Finance"}
                           </span>
                         </div>
                       </td>
@@ -911,147 +1333,21 @@ const Dashboard = ({ theme }) => {
                       </div>
                     </td>
                     <td>
-                      {objectif.frequence === "quotidien" && "Quotidien"}
-                      {objectif.frequence === "hebdomadaire" && "Hebdomadaire"}
-                      {objectif.frequence === "mensuel" && "Mensuel"}
+                      <StatutObjectif
+                        statut={objectif.statut || "en_attente"}
+                        onChange={(statut) => mettreAJourStatut(objectif.id, statut)}
+                      />
                     </td>
-                    <td>
-                      {objectif.typeDeTracking === "binaire" && "Binaire (✅/❌)"}
-                      {objectif.typeDeTracking === "compteur" && "Compteur"}
-                      {objectif.typeDeTracking === "numerique" && "Valeur numérique"}
-                    </td>
-                    <td className="colonne-progression">
-                      {objectif.statut === "en_cours" && (
-                        <>
-                          {objectif.typeDeTracking === "binaire" ? (
-                            <button
-                              className="bouton-statut"
-                              onClick={() => {
-                                // Logique pour basculer la complétion
-                                const aujourdhui = new Date().toISOString().split("T")[0]
-                                const isCompleted = objectif.progression[aujourdhui] === true
-
-                                // Mettre à jour localement
-                                const updatedObjectifs = [...objectifs]
-                                const index = updatedObjectifs.findIndex((obj) => obj.id === objectif.id)
-                                if (index !== -1) {
-                                  updatedObjectifs[index] = {
-                                    ...updatedObjectifs[index],
-                                    progression: {
-                                      ...updatedObjectifs[index].progression,
-                                      [aujourdhui]: !isCompleted,
-                                    },
-                                  }
-                                  setObjectifs(updatedObjectifs)
-
-                                  // Si authentifié, mettre à jour via l'API
-                                  if (isAuthenticated) {
-                                    objectifService.updateProgression(objectif.id, aujourdhui, !isCompleted)
-                                  } else {
-                                    // En mode démo, mettre à jour dans le localStorage
-                                    localStorage.setItem("objectifs", JSON.stringify(updatedObjectifs))
-                                  }
-                                }
-                              }}
-                            >
-                              {objectif.progression[new Date().toISOString().split("T")[0]] === true ? (
-                                <FontAwesomeIcon icon={faCheckCircle} className="icone-check" />
-                              ) : (
-                                <FontAwesomeIcon icon={faTimesCircle} className="icone-times" />
-                              )}
-                              {objectif.progression[new Date().toISOString().split("T")[0]] === true
-                                ? "Complété"
-                                : "Non complété"}
-                            </button>
-                          ) : (
-                            <div className="progression-numerique">
-                              <input
-                                type="number"
-                                className="input-progression"
-                                placeholder={objectif.progression[new Date().toISOString().split("T")[0]] || "0"}
-                                id={`progression-${objectif.id}`}
-                              />
-                              <button
-                                className="bouton-enregistrer"
-                                onClick={() => {
-                                  const aujourdhui = new Date().toISOString().split("T")[0]
-                                  const input = document.getElementById(`progression-${objectif.id}`)
-                                  const value = input.value
-
-                                  if (!value) return
-
-                                  const numericValue =
-                                    objectif.typeDeTracking === "compteur"
-                                      ? Number.parseInt(value, 10)
-                                      : Number.parseFloat(value)
-
-                                  // Mettre à jour localement
-                                  const updatedObjectifs = [...objectifs]
-                                  const index = updatedObjectifs.findIndex((obj) => obj.id === objectif.id)
-                                  if (index !== -1) {
-                                    updatedObjectifs[index] = {
-                                      ...updatedObjectifs[index],
-                                      progression: {
-                                        ...updatedObjectifs[index].progression,
-                                        [aujourdhui]: numericValue,
-                                      },
-                                    }
-                                    setObjectifs(updatedObjectifs)
-
-                                    // Si authentifié, mettre à jour via l'API
-                                    if (isAuthenticated) {
-                                      objectifService.updateProgression(objectif.id, aujourdhui, numericValue)
-                                    } else {
-                                      // En mode démo, mettre à jour dans le localStorage
-                                      localStorage.setItem("objectifs", JSON.stringify(updatedObjectifs))
-                                    }
-
-                                    // Vider l'input
-                                    input.value = ""
-                                  }
-                                }}
-                              >
-                                Enregistrer
-                              </button>
-                              <span className="valeur-actuelle">
-                                {objectif.progression[new Date().toISOString().split("T")[0]]
-                                  ? `Actuel: ${objectif.progression[new Date().toISOString().split("T")[0]]}`
-                                  : "Non suivi"}
-                                {objectif.cible ? ` / Cible: ${objectif.cible}` : ""}
-                              </span>
-                            </div>
-                          )}
-                        </>
-                      )}
-                      {objectif.statut !== "en_cours" && <span className="text-muted-foreground">Non disponible</span>}
-                    </td>
-                    <td className="colonne-statut">
-                      <div className={`badge-statut statut-${objectif.statut || "en_attente"}`}>
-                        {obtenirIconeStatut(objectif.statut || "en_attente")}
-                        <span>{obtenirLibelleStatut(objectif.statut || "en_attente")}</span>
-                      </div>
-                    </td>
+                    <td>{obtenirLibelleFrequence(objectif.frequence)}</td>
+                    <td>{obtenirLibelleTypeTracking(objectif.typeDeTracking)}</td>
+                    <td className="colonne-progression">{obtenirAffichageProgression(objectif)}</td>
+                    <td className="colonne-commentaire">{obtenirAffichageCommentaire(objectif)}</td>
                     <td className="colonne-actions">
                       <div className="boutons-actions">
-                        <button
-                          className="bouton-action"
-                          onClick={() => navigate(`/objectif/${objectif.id}`)}
-                          title="Voir les détails"
-                        >
-                          <FontAwesomeIcon icon={faEye} />
-                        </button>
-                        <button
-                          className="bouton-action"
-                          onClick={() => navigate(`/objectif/${objectif.id}/modifier`)}
-                          title="Modifier"
-                        >
+                        <button className="bouton-action" onClick={() => commencerEdition(objectif)}>
                           <FontAwesomeIcon icon={faEdit} />
                         </button>
-                        <button
-                          className="bouton-action"
-                          onClick={() => supprimerObjectif(objectif.id)}
-                          title="Supprimer"
-                        >
+                        <button className="bouton-action" onClick={() => supprimerObjectif(objectif.id)}>
                           <FontAwesomeIcon icon={faTrash} />
                         </button>
                       </div>
@@ -1220,6 +1516,9 @@ const Dashboard = ({ theme }) => {
             </div>
           </div>
         </div>
+      )}
+      {objectifHistorique && (
+        <HistoriqueCommentaires objectif={objectifHistorique} onClose={() => setObjectifHistorique(null)} />
       )}
     </div>
   )

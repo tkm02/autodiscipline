@@ -1,0 +1,137 @@
+/* General card styles */
+.content-card {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.content-card-header {
+  margin-bottom: 10px;
+}
+
+.content-card-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #34495e;
+}
+
+.content-card-description {
+  font-size: 14px;
+  color: #7f8c8d;
+}
+
+/* Stats section */
+.stats-section {
+  margin-bottom: 20px;
+}
+
+.stats-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.stats-section-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #34495e;
+}
+
+.stats-value {
+  font-size: 16px;
+  font-weight: bold;
+  color: #2ecc71;
+}
+
+/* Progress bar */
+.progress-container {
+  background-color: #ecf0f1;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 10px;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: #2ecc71;
+  transition: width 0.3s ease;
+}
+
+/* Stats grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 15px;
+}
+
+.stats-item {
+  text-align: center;
+}
+
+.icon-with-text {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+  color: #7f8c8d;
+}
+
+/* Stats rows */
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+/* Objective stats */
+.stats-card-objective {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stats-card-objective-name {
+  font-size: 14px;
+  font-weight: bold;
+  color: #34495e;
+}
+
+.stats-card-objective-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Badges */
+.badge {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.badge-green {
+  background-color: #2ecc71;
+}
+
+.badge-blue {
+  background-color: #3498db;
+}
+
+.badge-yellow {
+  background-color: #f1c40f;
+}
+
+.badge-purple {
+  background-color: #9b59b6;
+}
